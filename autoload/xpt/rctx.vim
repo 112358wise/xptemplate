@@ -80,12 +80,37 @@ fun! xpt#rctx#New( x ) "{{{
           \ }
 
     " for emulation of 'indentkeys'
-    let indentkeysList = split( &indentkeys, ',' )
-    call filter( indentkeysList, 'v:val=~''\V\^0=''' )
-    for k in indentkeysList
+    "
+    " vim issue:
+    "   :set indentkeys=0\,,0}
+    "   :echo &indentkeys
+    "
+    " results in:
+    "   "0,0}"
+    "
+    " The backslash escaped chars can not be read correctly.
 
+    let lst = split( &indentkeys, ',' )
+    let indentkeysList = []
+    for k in lst
+
+        " TRICK: Treat first of two continous comma as escaped.
+        if k == ""
+            let indentkeysList[ -1 ] .= ','
+        else
+            if k[ 0 ] == '0'
+                call add( indentkeysList, k )
+            endif
+        endif
+    endfor
+
+    for k in indentkeysList
         " "0=" is not included
-        let inst.oriIndentkeys[ k[ 2: ] ] = 1
+        if k[ 1 ] == '=' && len( k ) > 2
+            let inst.oriIndentkeys[ k[ 2: ] ] = 1
+        else
+            let inst.leadingCharToReindent[ k[ 1: ] ] = 1
+        endif
     endfor
 
     return inst
