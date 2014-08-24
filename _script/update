@@ -1,0 +1,5 @@
+#!/bin/sh
+
+_script/credit-update \
+    && _script/docindex.py \
+    && git commit -a -m 'update doc'
