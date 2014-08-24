@@ -1,0 +1,24 @@
+#!/bin/sh
+
+branches=
+branches="$branches $(git branch | awk '{print $NF}' | grep "^f\.")"
+branches="$branches $(git branch | awk '{print $NF}' | grep "^t\.")"
+branches="$branches $(git branch | awk '{print $NF}' | grep "^snp\.")"
+
+echo $branches
+
+# for br in $branches; do
+#     git merge \
+#         --no-edit \
+#         --commit \
+#         --no-ff \
+#         $br
+# done
+
+git merge \
+    --no-edit \
+    --commit \
+    --no-ff \
+    $branches \
+    && ./_script/update
+
