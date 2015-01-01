@@ -1,0 +1,18 @@
+#!/bin/bash
+
+cur_branch=$(git symbolic-ref HEAD 2>/dev/null)
+cur_branch=${cur_branch##refs/heads/}
+
+if [ ".$cur_branch" = ".mix" ]; then
+    if git diff --exit-code casual; then
+        git branch -D casual \
+            && git checkout -b casual \
+            && git push origin casual -f
+    else
+        echo "not same with branch 'casual'" >&2
+        exit 1
+    fi
+else
+    echo "not on branch 'mix'" >&2
+    exit 1
+fi
