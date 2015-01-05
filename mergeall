@@ -7,18 +7,11 @@ branches="$branches $(git branch | awk '{print $NF}' | grep "^snp\.")"
 
 echo $branches
 
-# for br in $branches; do
-#     git merge \
-#         --no-edit \
-#         --commit \
-#         --no-ff \
-#         $br
-# done
-
 git merge \
     --no-edit \
     --commit \
     --no-ff \
     $branches \
-    && ./_script/update
+    && ./_script/update \
+    && git tag -f mixdoc
 
