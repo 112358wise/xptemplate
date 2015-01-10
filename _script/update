@@ -1,0 +1,8 @@
+#!/bin/sh
+
+_script/credit-update \
+    && _script/docindex.py \
+    && git rm -r doc/xpt/option \
+    && git rm -r doc/xpt/snippet-function \
+    && vim -c "helptags ./doc" -c "qa!" \
+    && git commit -a -m 'update doc'

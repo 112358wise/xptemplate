@@ -1,0 +1,10 @@
+#!/bin/bash
+
+cur_branch=$(git symbolic-ref HEAD 2>/dev/null)
+cur_branch=${cur_branch##refs/heads/}
+
+[ "$cur_branch" = "mix" ] \
+    && git tag -f mixbkp \
+    && git reset --hard root \
+    && git mc --no-edit --commit internal \
+    && mergeall
