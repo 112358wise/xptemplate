@@ -70,44 +70,9 @@ XPTinclude
       \ _common/inlineComplete
       \ _common/common.*
 
-" XPTinclude
-      " \ _common/cmn.counter
+let s:f_prototype = xpt#snipfunction#funcs
+call extend( s:f, s:f_prototype, 'error' )
 
-" ========================= Function and Variables =============================
-
-
-fun! s:f.GetDict( ... )
-    return 
-endfunction
-
-" TODO bad, this function should not depends on phase of rendering
-fun! s:f.GetVar( name )
-    if a:name =~# '\V\^$_x'
-        try
-            let n = a:name[ 1 : ]
-            return self[ n ]()
-        catch /.*/
-            return a:name
-        endtry
-    endif
-
-    let r = self.renderContext
-
-    let ev = get( r.evalCtx, 'variables', {} )
-    let rv = get( r.snipSetting, 'variables', {} )
-
-    return get( ev, a:name,
-          \     get( rv, a:name,
-          \         get( self, a:name, a:name ) ) )
-
-    " if self.renderContext.phase == g:xptRenderPhase.uninit
-    "     return get( self.renderContext.evalCtx.variables, a:name,
-    "           \ get( self, a:name, a:name ) )
-    " else
-    "     return get( get( self.renderContext.snipSetting, 'variables', {} ), a:name,
-    "           \     get( self, a:name, a:name ) )
-    " endif
-endfunction
 
 fun! s:f._xSnipName()
     return self.renderContext.snipObject.name
@@ -125,6 +90,7 @@ fun! s:f.GetWrappedText()
 
     if l == '' && r == ''
         return { 'nIndent'  : wrap.indent,
+              \  'action'   : 'text',
               \  'text'     : wrap.text }
     else
 
@@ -165,7 +131,7 @@ let s:f.NN = s:f.ItemFullname
 
 " current value user typed
 fun! s:f.ItemValue() dict "{{{
-    return get( self.renderContext.evalCtx, 'userInput', '' )
+    return get( self.evalContext, 'userInput', '' )
 endfunction "}}}
 let s:f.V = s:f.ItemValue
 
@@ -288,12 +254,11 @@ let s:f.VOID = s:f.Void
 " Echo several expression and concat them.
 " That's the way to use normal vim script expression instead of mixed string
 fun! s:f.Echo( ... )
+    let text = ''
     if a:0 > 0
-        return a:1
-    else
-        return ''
+        let text = a:1
     endif
-    " return join( a:000, '' )
+    return { 'action': 'text', 'text': text }
 endfunction
 
 fun! s:f.EchoIf( isTrue, ... )
@@ -342,13 +307,18 @@ fun! s:f.Build( ... )
   return { 'action' : 'build', 'text' : join( a:000, '' ) }
 endfunction
 
+let s:f.Embed = s:f.Build
+
+fun! s:f.BuildSnippet( snipname )
+    return { 'action' : 'build', 'snippet' : a:snipname }
+endfunction
+
 fun! s:f.BuildIfChanged( ... )
   let v = substitute( self.V(), "\\V\n\\|\\s", '', 'g')
   " let fn = substitute( self.ItemFullname(), "\\V\n\\|\\s", '', 'g')
   let fn = substitute( self.ItemInitValueWithEdge(), "\\V\n\\|\\s", '', 'g')
 
   if v ==# fn || v == ''
-      " return { 'action' : 'keepIndent', 'text' : self.V() }
       return ''
   else
       return { 'action' : 'build', 'text' : join( a:000, '' ) }
@@ -409,10 +379,6 @@ fun! s:f.FinishOuter( ... )
 
 endfunction
 
-fun! s:f.Embed( snippet )
-  return { 'action' : 'embed', 'text' : a:snippet }
-endfunction
-
 fun! s:f.Next( ... )
   if a:0 == 0
     return { 'action' : 'next' }
@@ -442,17 +408,6 @@ endfunction "}}}
 fun! s:f.ChooseStr(...) "{{{
   return copy( a:000 )
 endfunction "}}}
-
-fun! s:f.Complete( key, ... )
-
-    let val = { 'action' : 'complete', 'pum' : a:key }
-
-    if a:0 == 1
-        let val.acceptEmpty = a:1 != 0
-    endif
-
-    return val
-endfunction
 
 " XXX
 " Fill in postType, and finish template rendering at once.

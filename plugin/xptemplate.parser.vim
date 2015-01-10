@@ -25,7 +25,6 @@ set cpo-=< cpo+=B
 runtime plugin/debug.vim
 
 runtime plugin/classes/FiletypeScope.vim
-runtime plugin/classes/FilterValue.vim
 runtime plugin/xptemplate.util.vim
 runtime plugin/xptemplate.vim
 
@@ -310,8 +309,6 @@ fun! DoParseSnippet( p ) "{{{
 
     let [i, len] = [0, len(lines)]
 
-    call s:ConvertIndent( lines )
-
     " parse lines
     " start end and blank start
     let [s, e, blk] = [-1, -1, 10000]
@@ -386,7 +383,7 @@ fun! s:XPTemplateParseSnippet(lines) "{{{
         let value = pair[ len(name) : ]
 
         " flag setting need no value present
-        let value = value[0:0] == '=' ? g:xptutil.UnescapeChar(value[1:], ' ') : 1
+        let value = value[0:0] == '=' ? xpt#util#UnescapeChar(value[1:], ' ') : 1
 
         let setting[name] = value
     endfor
@@ -410,7 +407,7 @@ fun! s:XPTemplateParseSnippet(lines) "{{{
             call s:log.Log("got value, start=".start)
 
 
-            let [ keyname, keytype ] = s:GetKeyType( key )
+            let [ keyname, keytype ] = xpt#parser#GetKeyType( key )
 
             call s:log.Log("parse XSET:" . keyname . "|" . keytype . '=' . val)
 
@@ -491,22 +488,6 @@ fun! s:GetSnipCommentHint(str) "{{{
     endif
 endfunction "}}}
 
-
-
-" TODO convert indent in runtime
-fun! s:ConvertIndent( snipLines ) "{{{
-
-
-    let tabspaces = repeat( ' ', &l:tabstop )
-    let indentRep = repeat( '\1', &l:shiftwidth )
-
-
-    let cmdExpand = 'substitute(v:val, ''^\( *\)\1\1\1'', ''' . indentRep . ''', "g" )'
-
-    call map( a:snipLines, cmdExpand )
-
-endfunction "}}}
-
 fun! s:getXSETkeyAndValue(lines, start) "{{{
     let start = a:start
 
@@ -541,7 +522,7 @@ endfunction "}}}
 " XXX
 " fun! s:XPTbufferScopeSet( str )
     " let [ key, value, start ] = s:getXSETkeyAndValue( [ 'XSET ' . a:str ], 0 )
-    " let [ keyname, keytype ] = s:GetKeyType( key )
+    " let [ keyname, keytype ] = xpt#parser#GetKeyType( key )
 " 
 " endfunction
 
@@ -602,20 +583,6 @@ fun! s:ParseMultiLineValues(lines, start) "{{{
     return [ start, val ]
 endfunction "}}}
 
-fun! s:GetKeyType(rawKey) "{{{
-
-    let keytype = matchstr(a:rawKey, '\V'.s:nonEscaped.'|\zs\.\{-}\$')
-    if keytype == ""
-        let keytype = matchstr(a:rawKey, '\V'.s:nonEscaped.'.\zs\.\{-}\$')
-    endif
-
-    let keyname = keytype == "" ? a:rawKey :  a:rawKey[ 0 : - len(keytype) - 2 ]
-    let keyname = substitute(keyname, '\V\\\(\[.|\\]\)', '\1', 'g')
-
-    return [ keyname, keytype ]
-
-endfunction "}}}
-
 fun! s:HandleXSETcommand(setting, command, keyname, keytype, value) "{{{
 
     if a:keyname ==# 'ComeFirst'
@@ -634,28 +601,28 @@ fun! s:HandleXSETcommand(setting, command, keyname, keytype, value) "{{{
 
     elseif a:keytype == "" || a:keytype ==# 'def'
         " first line is indent : empty indent
-        let a:setting.defaultValues[a:keyname] = g:FilterValue.New( 0, a:value )
+        let a:setting.defaultValues[a:keyname] = xpt#flt#New( 0, a:value )
 
     elseif a:keytype ==# 'map'
 
         let a:setting.mappings[ a:keyname ] = get(
               \ a:setting.mappings,
               \ a:keyname,
-              \ { 'saver' : g:MapSaver.New( 1 ), 'keys' : {} } )
+              \ { 'saver' : xpt#msvr#New(1), 'keys' : {} } )
 
         let key = matchstr( a:value, '\V\^\S\+\ze\s' )
         let mapping = matchstr( a:value, '\V\s\+\zs\.\*' )
 
-        call a:setting.mappings[ a:keyname ].saver.Add( 'i', key )
+        call xpt#msvr#Add( a:setting.mappings[ a:keyname ].saver, 'i', key )
 
-        let a:setting.mappings[ a:keyname ].keys[ key ] = g:FilterValue.New( 0, mapping )
+        let a:setting.mappings[ a:keyname ].keys[ key ] = xpt#flt#New( 0, mapping )
 
 
     elseif a:keytype ==# 'pre'
-        let a:setting.preValues[a:keyname] = g:FilterValue.New( 0, a:value )
+        let a:setting.preValues[a:keyname] = xpt#flt#New( 0, a:value )
 
     elseif a:keytype ==# 'ontype'
-        let a:setting.ontypeFilters[a:keyname] = g:FilterValue.New( 0, a:value )
+        let a:setting.ontypeFilters[a:keyname] = xpt#flt#New( 0, a:value )
 
     elseif a:keytype ==# 'post'
         if a:keyname =~ '\V...'
@@ -663,11 +630,11 @@ fun! s:HandleXSETcommand(setting, command, keyname, keytype, value) "{{{
             "
             " first line is indent : empty indent
             let a:setting.postFilters[a:keyname] = 
-                  \ g:FilterValue.New( 0, 'BuildIfNoChange(' . string(a:value) . ')' )
+                  \ xpt#flt#New( 0, 'BuildIfNoChange(' . string(a:value) . ')' )
 
         else
             " first line is indent : empty indent
-            let a:setting.postFilters[a:keyname] = g:FilterValue.New( 0, a:value )
+            let a:setting.postFilters[a:keyname] = xpt#flt#New( 0, a:value )
 
         endif
 
